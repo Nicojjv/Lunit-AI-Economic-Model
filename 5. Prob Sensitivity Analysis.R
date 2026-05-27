@@ -52,7 +52,7 @@ psa_list_nhs <- lapply(1:nrow(psa_inputs_nhs), function(i) {
   
   current_params <- psa_inputs_nhs[i, ]
   
-  res <- dec_tree(params = current_params, n_cohort = 1000, driver = "psa")
+  res <- dec_tree(params = current_params, n_cohort = 1000)
   
   data.frame(
     Simulation = i,
@@ -176,7 +176,7 @@ psa_list_provider <- lapply(1:nrow(psa_inputs_provider), function(i) {
   
   current_params <- psa_inputs_provider[i, ]
   
-  res <- dec_tree(params = current_params, n_cohort = 1000, driver = "psa")
+  res <- dec_tree(params = current_params, n_cohort = 1000)
   
   data.frame(
     Simulation = i,
