@@ -10,8 +10,7 @@ bep_arm2_sensitivity_nhs <- uniroot(f = break_even_point,
                                     interval = c(0.7, 0.999), 
                                     params = input_nhs,
                                     n_cohort = 1000, 
-                                    param_name = "arm2_sensitivity",
-                                    driver = "sensitivity")
+                                    param_name = "arm2_sensitivity")
 
 y_min <- -10
 y_max <- 20
@@ -20,8 +19,7 @@ curve(expr = Vectorize(break_even_point, vectorize.args = "target_value")(
   target_value = x, 
   params = input_nhs, 
   n_cohort = 1000, 
-  param_name = "arm2_sensitivity", 
-  driver = "sensitivity"            
+  param_name = "arm2_sensitivity"          
 ), 
 from = 0.7, to = 0.999,            
 ylim = c(y_min, y_max), 
@@ -86,10 +84,7 @@ new_sensitivity_nhs <- data.frame(
   
 )
 
-new_sensitivity_nhs <- dec_tree(params = new_sensitivity_nhs, n_cohort = 1000, driver = "sensitivity")
-
-
-
+new_sensitivity_nhs <- dec_tree(params = new_sensitivity_nhs, n_cohort = 1000)
 
 # =======================================
 #   Break Even Point Analysis: Provider
@@ -99,8 +94,7 @@ bep_lunit_cost_provider <- uniroot(f = break_even_point,
                                     interval = c(1, 20), 
                                     params = input_provider,
                                     n_cohort = 1000, 
-                                    param_name = "cost_lunit",
-                                    driver = "lunit cost")
+                                    param_name = "cost_lunit")
 
 y_min <- -10
 y_max <- 20
@@ -109,8 +103,7 @@ curve(expr = Vectorize(break_even_point, vectorize.args = "target_value")(
   target_value = x, 
   params = input_provider, 
   n_cohort = 1000, 
-  param_name = "cost_lunit", 
-  driver = "lunit cost"            
+  param_name = "cost_lunit"           
 ), 
 from = 1, to = 20,            
 ylim = c(y_min, y_max), 
@@ -155,23 +148,20 @@ text(x = root_value,
 #       Tornado Diagram: NHS
 # =======================================
 
+# Variables 
 params_to_vary_nhs <- c(
-  
   "arm1_sensitivity", 
   "arm1_specificity", 
   "arm1_p_arb",       
-
   "arm2_sensitivity", 
-  "arm2_specificity", 
-  
+  "arm2_specificity",
   "prevalence",
-
   "cost_mammogram",   
   "cost_ultrasound",  
-  "reading_time_senior_radiologist_nhs",    
-  "reading_time_consultant_radiologist_nhs",
-  "annual_salary_senior_radiologist_nhs",    
-  "annual_salary_consultant_radiologist_nhs",       
+  "reading_time_senior_radiologist",    
+  "reading_time_consultant_radiologist",
+  "annual_salary_senior_radiologist",    
+  "annual_salary_consultant_radiologist",       
   "cost_lunit",       
   "cost_biopsy"      
 )
@@ -183,8 +173,7 @@ for(p in params_to_vary_nhs) {
   low_val  <- base_val * 0.8
   high_val <- base_val * 1.2
   
-  # If it's a probability (contains "_p_" or starts with "arm"), bound between 0 and 1
-  if(grepl("_p_", p) | grepl("arm", p)) {
+  if(grepl("_p_", p) | grepl("arm", p) | grepl("prevalence", p)) {
     low_val  <- max(0, low_val)
     high_val <- min(1, high_val)
   }
@@ -199,34 +188,21 @@ rownames(m_tor_nhs) <- params_to_vary_nhs
 for(i in seq_along(params_to_vary_nhs)) {
   p_name <- params_to_vary_nhs[i]
   
-  current_driver <- "sensitivity" 
-  
-  if (p_name == "arm2_specificity") {
-    current_driver <- "specificity"
-  }
-  
   for(val_type in c("BaseCase", "Low", "High")) {
-    
     temp_params <- input_nhs
-    
     val_to_test <- sensitivity_ranges_nhs[[p_name]][val_type]
     temp_params[[p_name]] <- val_to_test
     
-    res <- dec_tree(temp_params, n_cohort = 1000, driver = current_driver)
+    res <- dec_tree(temp_params, n_cohort = 1000)
     
     inc_cost <- res$Total_Cost[2] - res$Total_Cost[1]
-    
     m_tor_nhs[i, tolower(val_type)] <- inc_cost
   }
 }
 
 devtools::source_url("https://github.com/mbounthavong/Decision_Analysis/blob/master/tornado_diagram_code.R?raw=TRUE")
-
 m_tor_nhs_filtered <- m_tor_nhs[abs(m_tor_nhs[, "high"] - m_tor_nhs[, "low"]) > 1e-6, , drop = FALSE]
 
-print(rownames(m_tor_nhs_filtered))
-
-# Plot
 tornado_nhs <- TornadoPlot(main_title = "One-Way Sensitivity Analysis - NHS Perspective",
                            Parms = rownames(m_tor_nhs_filtered), 
                            Outcomes = m_tor_nhs_filtered, 
@@ -235,35 +211,20 @@ tornado_nhs <- TornadoPlot(main_title = "One-Way Sensitivity Analysis - NHS Pers
                            ylab = "Model Parameters", 
                            col1 = "#8DA399", col2 = "#2F4F4F")
 
-tornado_nhs + theme(
-  plot.title = element_text(hjust = 0, size = 14, face = "bold"),
-  plot.title.position = "plot",
-  
-  axis.text.x = element_text(size = 8), 
-  axis.text.y = element_text(size = 8), 
-  
-  axis.title.x = element_text(size = 10),
-  axis.title.y = element_text(size = 10),
-  
-  legend.title = element_text(size = 7), 
-  legend.text = element_text(size = 7)   
-)
 
 
 # =======================================
 #       Tornado Diagram: Provider
 # =======================================
 
+# Variables 
 params_to_vary_provider <- c(
   "arm1_sensitivity", 
   "arm1_specificity", 
   "arm1_p_arb",       
-  
   "arm2_sensitivity", 
-  "arm2_specificity", 
-  
+  "arm2_specificity",
   "prevalence",
-  
   "cost_mammogram",   
   "cost_ultrasound",  
   "reading_time_senior_radiologist",    
@@ -281,8 +242,7 @@ for(p in params_to_vary_provider) {
   low_val  <- base_val * 0.8
   high_val <- base_val * 1.2
   
-  # If it's a probability (contains "_p_" or starts with "arm"), bound between 0 and 1
-  if(grepl("_p_", p) | grepl("arm", p)) {
+  if(grepl("_p_", p) | grepl("arm", p) | grepl("prevalence", p)) {
     low_val  <- max(0, low_val)
     high_val <- min(1, high_val)
   }
@@ -297,34 +257,21 @@ rownames(m_tor_provider) <- params_to_vary_provider
 for(i in seq_along(params_to_vary_provider)) {
   p_name <- params_to_vary_provider[i]
   
-  current_driver <- "sensitivity" 
-  
-  if (p_name == "arm2_specificity") {
-    current_driver <- "specificity"
-  }
-  
   for(val_type in c("BaseCase", "Low", "High")) {
-    
     temp_params <- input_provider
-    
     val_to_test <- sensitivity_ranges_provider[[p_name]][val_type]
     temp_params[[p_name]] <- val_to_test
     
-    res <- dec_tree(temp_params, n_cohort = 1000, driver = current_driver)
+    res <- dec_tree(temp_params, n_cohort = 1000)
     
     inc_cost <- res$Total_Cost[2] - res$Total_Cost[1]
-    
     m_tor_provider[i, tolower(val_type)] <- inc_cost
   }
 }
 
 devtools::source_url("https://github.com/mbounthavong/Decision_Analysis/blob/master/tornado_diagram_code.R?raw=TRUE")
-
 m_tor_provider_filtered <- m_tor_provider[abs(m_tor_provider[, "high"] - m_tor_provider[, "low"]) > 1e-6, , drop = FALSE]
 
-print(rownames(m_tor_provider_filtered))
-
-# Plot
 tornado_provider <- TornadoPlot(main_title = "One-Way Sensitivity Analysis - Provider Perspective",
                                 Parms = rownames(m_tor_provider_filtered), 
                                 Outcomes = m_tor_provider_filtered, 
@@ -332,17 +279,3 @@ tornado_provider <- TornadoPlot(main_title = "One-Way Sensitivity Analysis - Pro
                                 xlab = "Incremental Cost (£)", 
                                 ylab = "Model Parameters", 
                                 col1 = "#8DA399", col2 = "#2F4F4F")
-
-tornado_provider + theme(
-  plot.title = element_text(hjust = 0, size = 14, face = "bold"),
-  plot.title.position = "plot",
-  
-  axis.text.x = element_text(size = 8), 
-  axis.text.y = element_text(size = 8), 
-  
-  axis.title.x = element_text(size = 10),
-  axis.title.y = element_text(size = 10),
-  
-  legend.title = element_text(size = 7), 
-  legend.text = element_text(size = 7)   
-)
